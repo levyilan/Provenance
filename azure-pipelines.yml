@@ -4,73 +4,89 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/xcode
 
 pool:
-  vmImage: 'macOS-10.13'
+  vmImage: 'macOS-latest'
 
 variables:
-  scheme: 'Provenance-Release'
-  sdk: 'iphoneos'
-  configuration: 'Release'
-  target: 'Provenance'
+  scheme: 'Provenance'
+  sdk: 'iphonesimulator'
+  configuration: 'Debug'
+  carthage-platform: 'iOS'
+  BUNDLE_PATH: $(Pipeline.Workspace)/.bundle
 
 steps:
+
+- checkout: self # self represents the repo where the initial Pipelines YAML file was found
+  clean: false  # if true, run `execute git clean -ffdx && git reset --hard HEAD` before fetching
+  submodules: recursive  # set to 'true' for a single level of submodules or 'recursive' to get submodules of submodules; defaults to not checking out submodules
+  path: string  # path to check out source code, relative to the agent's build directory (e.g. \_work\1); defaults to a directory called `s`
+  persistCredentials: true  # if 'true', leave the OAuth token in the Git config after the initial fetch; defaults to false
+
+- task: UseRubyVersion@0
+  displayName: 'Use Ruby >= 2.5.1'
+  inputs:
+    versionSpec: '>= 2.5.1'
+
+- task: Cache@2
+  inputs:
+    key: 'gems | "$(Agent.OS)"'
+    restoreKeys: | 
+      gems | "$(Agent.OS)"
+      gems
+    path: $(BUNDLE_PATH)
+  displayName: Cache gems
+- script: |
+    bundle config set without 'documentation test'
+    bundle install --jobs=8
+  displayName: 'Install Gems'
+
+- task: Cache@2
+  inputs:
+    key: 'carthage | "$(carthage-platform)" | Cartfile.resolved | Romefile'
+    path: Carthage/Build
+  displayName: Carthage cache
+
+- task: Cache@2
+  inputs:
+    key: 'Romefile'
+    path: $(HOME)/Library/Caches/Rome
+  displayName: Rome cache
+
+- script: |
+    brew tap tmspzz/tap https://github.com/tmspzz/homebrew-tap.git
+    brew install tmspzz/homebrew-tap/rome 2>/dev/null || true
+    bundle exec fastlane rome_download platform:$(carthage-platform)
+  displayName: Rome download
+
+- script: |
+    bundle exec fastlane carthage_bootstrap platform:$(carthage-platform) configuration:'Debug'
+  displayName: Carthage bootstrap
+
+- script: |
+    bundle exec fastlane rome_upload platform:$(carthage-platform)
+  displayName: Rome upload
+
+- task: Cache@2
+  inputs:
+    key: 'swiftc --version'
+    path: build
+  displayName: XCode cache
+
 - task: Xcode@5
   inputs:
-    actions: 'build'
-    sdk: '$(sdk)'
     scheme: '$(scheme)'
-    configuration: '$(configuration)'
-    target:  '$(target)'
     xcWorkspacePath: 'Provenance.xcworkspace'
+    xcodeVersion: '11' # Options: 8, 9, default, specifyPath
     exportPath: '$(agent.buildDirectory)/output/$(sdk)/$(configuration)'
-    xcodeVersion: '10' # Options: 8, 9, default, specifyPath
-    destinationPlatformOption: 'iOS'
-    destinationTypeOption: 'devices' # Optional. Options: simulators, devices
-    packageApp: true
-    #signingOption: 'nosign' # Optional. Options: nosign, default, manual, auto
-    #signingIdentity: # Optional
-    #provisioningProfileUuid: # Optional
-    #provisioningProfileName: # Optional
-    #teamId: # Optional
-    # Additional options https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/build/xcode?view=vsts
+    packageApp: false
+  displayName: Building project
 
-# Install Apple Certificate
-# Install an Apple certificate required to build on a macOS agent
-# https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/utility/install-apple-certificate?view=vsts
-# - task: InstallAppleCertificate@2
-#   inputs:
-    # certSecureFile: 
-    #certPwd: # Optional
-    #keychain: 'temp' # Options: default, temp, custom
-    #keychainPassword: # Required when keychain == Custom || Keychain == Default
-    #customKeychainPath: # Required when keychain == Custom
-    #deleteCert: # Optional
-    #deleteCustomKeychain: # Optional
-    #signingIdentity: # Optional
-
-# Install Apple Provisioning Profile
-# Install an Apple provisioning profile required to build on a macOS agent
-# https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/utility/install-apple-provisioning-profile?view=vsts
-# - task: InstallAppleProvisioningProfile@1
-  # inputs:
-    #provisioningProfileLocation: 'secureFiles' # Options: secureFiles, sourceRepository
-    #provProfileSecureFile: # Required when provisioningProfileLocation == SecureFiles
-    #provProfileSourceRepository: # Required when provisioningProfileLocation == SourceRepository
-    #removeProfile: # Optional
-
-# App Center Distribute
-# Distribute app builds to testers and users via App Center
-# - task: AppCenterDistribute@1
-#   inputs:
-#     serverEndpoint: 
-#     appSlug: 
-#     appFile: 
-    #symbolsOption: 'Apple' # Optional. Options: apple
-    #symbolsPath: # Optional
-    #symbolsPdbFiles: '**/*.pdb' # Optional
-    #symbolsDsymFiles: # Optional
-    #symbolsMappingTxtFile: # Optional
-    #symbolsIncludeParentDirectory: # Optional
-    #releaseNotesOption: 'input' # Options: input, file
-    #releaseNotesInput: # Required when releaseNotesOption == Input
-    #releaseNotesFile: # Required when releaseNotesOption == File
-    #distributionGroupId: # Optional
+- task: Xcode@5
+  inputs:
+    actions: 'test'
+    scheme: '$(scheme)'
+    xcWorkspacePath: 'Provenance.xcworkspace'
+    xcodeVersion: '11' # Options: 8, 9, default, specifyPath
+    packageApp: false
+    destinationPlatformOption: iOS
+    destinationSimulators: iPhone 8
+  displayName: Running tests

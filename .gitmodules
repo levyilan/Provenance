@@ -67,18 +67,15 @@
 [submodule "Carthage/Checkouts/XLActionController"]
 	url = https://github.com/Puasonych/XLActionController.git
 	path = Carthage/Checkouts/XLActionController
-[submodule "Carthage/Checkouts/promises"]
-	path = Carthage/Checkouts/promises
-	url = https://github.com/google/promises.git
 [submodule "Carthage/Checkouts/ZipArchive"]
 	path = Carthage/Checkouts/ZipArchive
 	url = https://github.com/ZipArchive/ZipArchive.git
-[submodule "Carthage/Checkouts/ZIPFoundation"]
-	path = Carthage/Checkouts/ZIPFoundation
-	url = https://github.com/weichsel/ZIPFoundation.git
 [submodule "Cores/TGBDual/tgbdual-emulator"]
 	path = Cores/TGBDual/tgbdual-emulator
 	url = https://github.com/libretro/tgbdual-libretro.git
 [submodule "Carthage/Checkouts/SteamController"]
 	path = Carthage/Checkouts/SteamController
 	url = https://github.com/zydeco/SteamController.git
+[submodule "Carthage/Checkouts/appcenter-sdk-apple"]
+	path = Carthage/Checkouts/appcenter-sdk-apple
+	url = https://github.com/microsoft/appcenter-sdk-apple.git

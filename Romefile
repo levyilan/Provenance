@@ -1,6 +1,6 @@
 cache:
   local: ~/Library/Caches/Rome/
-  s3Bucket: carthage
+  s3Bucket: cache.provenance
 currentMap:
 - PVLibrary:
     - name: PVLibrary
@@ -87,9 +87,6 @@ repositoryMap:
 - XLActionController:
   - name: XLActionController
     platforms: [iOS]
-- ZIPFoundation:
-  - name: ZIPFoundation
-    platforms: [iOS,tvOS]
 - realm-cocoa:
   - name: Realm
     platforms: [iOS,tvOS]
